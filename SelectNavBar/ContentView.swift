@@ -29,16 +29,9 @@ class ItemSelection: ObservableObject {
 class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
 
     var tableView = UITableView()
-    
-    // 表示データ
-    var items: [SelectableItem] = [
-        SelectableItem(name: "Apple"),
-        SelectableItem(name: "Banana"),
-        SelectableItem(name: "Cherry")
-    ]
-    
-    // 選択アイテム
-    var selectedItems = Set<SelectableItem>()
+
+    // ItemSelection をここに持たせる
+    var selection = ItemSelection()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -58,56 +51,47 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
         view.addSubview(tableView)
     }
-    
-    // 以下、tableView delegate/datasource とナビバー更新はそのまま
-    
-    
-    // MARK: - UITableViewDataSource
-    
+
+    // DataSource
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return items.count
+        selection.items.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        let item = items[indexPath.row]
+        let item = selection.items[indexPath.row]
         cell.textLabel?.text = item.name
-        
-        // 選択済みはチェックマーク
-        if selectedItems.contains(item) {
-            cell.accessoryType = .checkmark
-        } else {
-            cell.accessoryType = .none
-        }
-        
+        cell.accessoryType = selection.selectedItems.contains(item) ? .checkmark : .none
         return cell
     }
-    
-    // MARK: - UITableViewDelegate
-    
+
+    // Delegate
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let item = items[indexPath.row]
-        selectedItems.insert(item)
+        let item = selection.items[indexPath.row]
+        if selection.selectedItems.contains(item) {
+            selection.selectedItems.remove(item)
+            tableView.deselectRow(at: indexPath, animated: true)
+        } else {
+            selection.selectedItems.insert(item)
+        }
         updateNavigationBar()
         tableView.reloadRows(at: [indexPath], with: .automatic)
     }
-    
+
     func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
-        let item = items[indexPath.row]
-        selectedItems.remove(item)
+        let item = selection.items[indexPath.row]
+        selection.selectedItems.remove(item)
         updateNavigationBar()
         tableView.reloadRows(at: [indexPath], with: .automatic)
     }
-    
-    // MARK: - Navigation Bar Update
-    
+
+    // Navigation Bar Update
     func updateNavigationBar() {
-        if selectedItems.isEmpty {
+        if selection.selectedItems.isEmpty {
             title = "Items"
             navigationItem.rightBarButtonItem = nil
         } else {
-            title = "\(selectedItems.count) selected"
+            title = "\(selection.selectedItems.count) selected"
             navigationItem.rightBarButtonItem = UIBarButtonItem(
                 title: "Delete",
                 style: .plain,
@@ -116,79 +100,29 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
             )
         }
     }
-    
+
     @objc func deleteSelectedItems() {
-        items.removeAll { selectedItems.contains($0) }
-        selectedItems.removeAll()
+        selection.items.removeAll { selection.selectedItems.contains($0) }
+        selection.selectedItems.removeAll()
         tableView.reloadData()
         updateNavigationBar()
     }
 }
 
-struct MultiSelectTableView: UIViewRepresentable {
-    @ObservedObject var selection: ItemSelection
-
-    func makeUIView(context: Context) -> UITableView {
-        let tableView = UITableView()
-        tableView.delegate = context.coordinator
-        tableView.dataSource = context.coordinator
-        tableView.allowsMultipleSelection = true
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
-        return tableView
+struct MultiSelectTableView: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> ViewController {
+        return ViewController()
     }
 
-    func updateUIView(_ uiView: UITableView, context: Context) {
-        uiView.reloadData()
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    class Coordinator: NSObject, UITableViewDataSource, UITableViewDelegate {
-        var parent: MultiSelectTableView
-
-        init(_ parent: MultiSelectTableView) { self.parent = parent }
-
-        func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-            parent.selection.items.count
-        }
-
-        func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-            let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-            let item = parent.selection.items[indexPath.row] // ← ここがポイント
-            cell.textLabel?.text = item.name
-            cell.accessoryType = parent.selection.selectedItems.contains(item) ? .checkmark : .none
-            return cell
-        }
-
-        func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-            let item = parent.selection.items[indexPath.row]
-            parent.selection.selectedItems.insert(item)
-            tableView.reloadRows(at: [indexPath], with: .automatic)
-        }
-
-        func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
-            let item = parent.selection.items[indexPath.row]
-            parent.selection.selectedItems.remove(item)
-            tableView.reloadRows(at: [indexPath], with: .automatic)
-        }
+    func updateUIViewController(_ uiViewController: ViewController, context: Context) {
+        // SwiftUI 側の状態と同期したいときにここを書く（今回は不要）
     }
 }
 
 struct ContentView: View {
-    @StateObject var selection = ItemSelection()
-    
     var body: some View {
         NavigationView {
-            MultiSelectTableView(selection: selection)
-                .navigationTitle(selection.selectedItems.isEmpty ? "Items" : "\(selection.selectedItems.count) selected")
-                .toolbar {
-                    if !selection.selectedItems.isEmpty {
-                        Button("Delete") {
-                            selection.items.removeAll { selection.selectedItems.contains($0) }
-                            selection.selectedItems.removeAll()
-                        }
-                    }
-                }
+            MultiSelectTableView() // ここはダミー渡しも可能
         }
     }
 }
