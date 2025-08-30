@@ -12,6 +12,7 @@ import UIKit
 
 // サンプルの Item 型
 // 元: struct Item
+// MARK: - Item Model
 struct SelectableItem: Hashable, Identifiable {
     let id = UUID()
     let name: String
@@ -26,12 +27,11 @@ class ItemSelection: ObservableObject {
     @Published var selectedItems = Set<SelectableItem>()
 }
 
+// MARK: - UIKit Controller
 class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
 
     var tableView = UITableView()
-
-    // ItemSelection をここに持たせる
-    var selection = ItemSelection()
+    var selection = ItemSelection()   // データ保持
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -109,20 +109,20 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     }
 }
 
+// MARK: - SwiftUI Bridge
 struct MultiSelectTableView: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> ViewController {
-        return ViewController()
+    func makeUIViewController(context: Context) -> UINavigationController {
+        let vc = ViewController()
+        let nav = UINavigationController(rootViewController: vc)
+        return nav
     }
 
-    func updateUIViewController(_ uiViewController: ViewController, context: Context) {
-        // SwiftUI 側の状態と同期したいときにここを書く（今回は不要）
-    }
+    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
 }
 
 struct ContentView: View {
     var body: some View {
-        NavigationView {
-            MultiSelectTableView() // ここはダミー渡しも可能
-        }
+        MultiSelectTableView() // UIKit のナビゲーションバーをそのまま表示
+            .edgesIgnoringSafeArea(.all)
     }
 }
