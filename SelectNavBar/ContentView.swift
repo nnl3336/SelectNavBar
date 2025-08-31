@@ -42,6 +42,50 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         updateNavigationBar()
     }
     
+    // Navigation Bar Update
+    func updateNavigationBar() {
+        if selection.selectedItems.isEmpty {
+            title = "Items"
+            navigationItem.rightBarButtonItem = nil
+        } else {
+            title = "\(selection.selectedItems.count) selected"
+            
+            // アクション定義
+            let deleteAction = UIAction(title: "Delete", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
+                self.deleteSelectedItems()
+            }
+            let shareAction = UIAction(title: "選択", image: UIImage(systemName: "square.and.arrow.up")) { _ in
+                self.shareSelectedItems()
+            }
+            
+            // UIMenu 作成
+            let menu = UIMenu(title: "", children: [deleteAction, shareAction])
+            
+            // UIBarButtonItem に UIMenu を付与
+            let menuButton = UIBarButtonItem(title: "Actions", image: UIImage(systemName: "ellipsis.circle"), primaryAction: nil, menu: menu)
+            
+            navigationItem.rightBarButtonItem = menuButton
+        }
+    }
+
+    @objc func deleteSelectedItems() {
+        selection.items.removeAll { selection.selectedItems.contains($0) }
+        selection.selectedItems.removeAll()
+        tableView.reloadData()
+        updateNavigationBar()
+    }
+
+    func shareSelectedItems() {
+        // 例: すべての items を選択済みに追加する
+        for item in selection.items {
+            selection.selectedItems.insert(item)
+        }
+        
+        tableView.reloadData()
+        updateNavigationBar()
+    }
+
+    
     func setupTableView() {
         tableView.frame = view.bounds
         tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -83,29 +127,6 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         selection.selectedItems.remove(item)
         updateNavigationBar()
         tableView.reloadRows(at: [indexPath], with: .automatic)
-    }
-
-    // Navigation Bar Update
-    func updateNavigationBar() {
-        if selection.selectedItems.isEmpty {
-            title = "Items"
-            navigationItem.rightBarButtonItem = nil
-        } else {
-            title = "\(selection.selectedItems.count) selected"
-            navigationItem.rightBarButtonItem = UIBarButtonItem(
-                title: "Delete",
-                style: .plain,
-                target: self,
-                action: #selector(deleteSelectedItems)
-            )
-        }
-    }
-
-    @objc func deleteSelectedItems() {
-        selection.items.removeAll { selection.selectedItems.contains($0) }
-        selection.selectedItems.removeAll()
-        tableView.reloadData()
-        updateNavigationBar()
     }
 }
 
