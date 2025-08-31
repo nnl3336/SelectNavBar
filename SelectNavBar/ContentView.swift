@@ -42,6 +42,53 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         updateNavigationBar()
     }
     
+    // MARK: - Long-press Context Menu (iOS 13+)
+    func tableView(_ tableView: UITableView,
+                   contextMenuConfigurationForRowAt indexPath: IndexPath,
+                   point: CGPoint) -> UIContextMenuConfiguration? {
+        let item = selection.items[indexPath.row]
+
+        return UIContextMenuConfiguration(identifier: indexPath as NSIndexPath,
+                                          previewProvider: nil) { _ in
+            let isSelected = self.selection.selectedItems.contains(item)
+
+            // 「選択に追加」 or 「選択を解除」を動的に出す
+            let toggleAction = UIAction(
+                title: isSelected ? "選択を解除" : "選択に追加",
+                image: UIImage(systemName: isSelected ? "checkmark.circle.fill" : "checkmark.circle")
+            ) { _ in
+                if isSelected {
+                    self.selection.selectedItems.remove(item)
+                } else {
+                    self.selection.selectedItems.insert(item)
+                }
+                // 見た目更新
+                if let cell = tableView.cellForRow(at: indexPath) {
+                    cell.accessoryType = self.selection.selectedItems.contains(item) ? .checkmark : .none
+                }
+                self.updateNavigationBar()
+            }
+
+            // 例: その場で削除も置いておく（任意）
+            let deleteAction = UIAction(
+                title: "Delete",
+                image: UIImage(systemName: "trash"),
+                attributes: .destructive
+            ) { _ in
+                // データ削除
+                if let idx = self.selection.items.firstIndex(of: item) {
+                    self.selection.items.remove(at: idx)
+                    self.selection.selectedItems.remove(item)
+                    tableView.deleteRows(at: [IndexPath(row: idx, section: 0)], with: .automatic)
+                    self.updateNavigationBar()
+                }
+            }
+
+            return UIMenu(title: "", children: [toggleAction, deleteAction])
+        }
+    }
+
+    
     // Navigation Bar Update
     func updateNavigationBar() {
         if selection.selectedItems.isEmpty {
